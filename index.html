@@ -27,7 +27,7 @@
         form {
             margin-top: 20px;
         }
-        input, select, button {
+        input, button {
             margin: 5px 0;
             padding: 5px;
         }
@@ -47,10 +47,7 @@
     <form id="addEventForm">
         <input type="date" id="eventDate" required>
         <input type="text" id="companyName" placeholder="Company Name" required>
-        <select id="eventType" required>
-            <option value="Online Assessment">Online Assessment</option>
-            <option value="Interview">Interview</option>
-        </select>
+        <input type="text" id="eventType" placeholder="Event Type" required>
         <button type="submit">Add Event</button>
     </form>
 
