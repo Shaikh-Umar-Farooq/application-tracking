@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Events Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        form {
+            margin-top: 20px;
+        }
+        input, button {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .delete-btn {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Company Events Tracker</h1>
+    
+    <h2>Add New Event</h2>
+    <form id="addEventForm">
+        <input type="date" id="eventDate" required>
+        <input type="text" id="companyName" placeholder="Company Name" required>
+        <input type="text" id="eventType" placeholder="Event Type" required>
+        <button type="submit">Add Event</button>
+    </form>
+
+    <h2>Upcoming Events</h2>
+    <table id="eventsTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Company</th>
+                <th>Event Type</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="eventsTableBody"></tbody>
+    </table>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+
+        // Function to add a new event
+        async function addEvent(event) {
+            try {
+                const response = await fetch(`${API_URL}/events`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(event),
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to add event');
+                }
+                refreshEvents();
+            } catch (error) {
+                console.error('Error adding event:', error);
+                alert(error.message);
+            }
+        }
+
+        // Function to get all events
+        async function getEvents() {
+            try {
+                const response = await fetch(`${API_URL}/events`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch events');
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error getting events:', error);
+                return [];
+            }
+        }
+
+        // Function to delete an event
+        async function deleteEvent(id) {
+            if (!confirm('Are you sure you want to delete this event?')) {
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/events/${id}`, {
+                    method: 'DELETE',
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to delete event');
+                }
+                refreshEvents();
+            } catch (error) {
+                console.error('Error deleting event:', error);
+                alert('Failed to delete event');
+            }
+        }
+
+        // Function to refresh the events table
+        async function refreshEvents() {
+            const events = await getEvents();
+            const tableBody = document.getElementById('eventsTableBody');
+            tableBody.innerHTML = '';
+
+            events.forEach(event => {
+                const row = tableBody.insertRow();
+                row.insertCell().textContent = new Date(event.date).toLocaleDateString();
+                row.insertCell().textContent = event.company;
+                row.insertCell().textContent = event.type;
+                const actionCell = row.insertCell();
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.className = 'delete-btn';
+                deleteButton.onclick = () => deleteEvent(event._id);
+                actionCell.appendChild(deleteButton);
+            });
+        }
+
+        // Event listener for form submission
+        document.getElementById('addEventForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const eventDate = new Date(document.getElementById('eventDate').value);
+            const currentDate = new Date();
+            currentDate.setHours(0, 0, 0, 0); // Set to start of day
+
+            if (eventDate < currentDate) {
+                alert('Cannot add events for past dates');
+                return;
+            }
+
+            const event = {
+                date: eventDate,
+                company: document.getElementById('companyName').value,
+                type: document.getElementById('eventType').value
+            };
+            await addEvent(event);
+            e.target.reset();
+        });
+
+        // Initial load of events
+        refreshEvents();
+    </script>
+</body>
+</html>
