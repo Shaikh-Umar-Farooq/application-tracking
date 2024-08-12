@@ -31,12 +31,16 @@
             margin: 5px 0;
             padding: 5px;
         }
-        .delete-btn {
+        .delete-btn, .edit-btn {
             background-color: #ff4d4d;
             color: white;
             border: none;
             padding: 5px 10px;
             cursor: pointer;
+            margin-right: 5px;
+        }
+        .edit-btn {
+            background-color: #4CAF50;
         }
     </style>
 </head>
@@ -66,6 +70,12 @@
 
     <script>
         const API_URL = 'https://application-tracking-production.up.railway.app/api';
+
+        // Function to format date as "dd-MMM"
+        function formatDate(date) {
+            const options = { day: '2-digit', month: 'short' };
+            return new Date(date).toLocaleDateString('en-US', options).replace(',', '');
+        }
 
         // Function to add a new event
         async function addEvent(event) {
@@ -121,6 +131,27 @@
             }
         }
 
+        // Function to edit an event
+        async function editEvent(id, event) {
+            try {
+                const response = await fetch(`${API_URL}/events/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(event),
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to update event');
+                }
+                refreshEvents();
+            } catch (error) {
+                console.error('Error updating event:', error);
+                alert(error.message);
+            }
+        }
+
         // Function to refresh the events table
         async function refreshEvents() {
             const events = await getEvents();
@@ -129,10 +160,17 @@
 
             events.forEach(event => {
                 const row = tableBody.insertRow();
-                row.insertCell().textContent = new Date(event.date).toLocaleDateString();
+                row.insertCell().textContent = formatDate(event.date);
                 row.insertCell().textContent = event.company;
                 row.insertCell().textContent = event.type;
                 const actionCell = row.insertCell();
+                
+                const editButton = document.createElement('button');
+                editButton.textContent = 'Edit';
+                editButton.className = 'edit-btn';
+                editButton.onclick = () => showEditForm(event);
+                actionCell.appendChild(editButton);
+
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = 'Delete';
                 deleteButton.className = 'delete-btn';
@@ -141,8 +179,47 @@
             });
         }
 
-        // Event listener for form submission
-        document.getElementById('addEventForm').addEventListener('submit', async (e) => {
+        // Function to show edit form
+        function showEditForm(event) {
+            const form = document.getElementById('addEventForm');
+            form.innerHTML = `
+                <input type="date" id="editEventDate" value="${new Date(event.date).toISOString().split('T')[0]}" required>
+                <input type="text" id="editCompanyName" value="${event.company}" required>
+                <input type="text" id="editEventType" value="${event.type}" required>
+                <button type="submit">Update Event</button>
+                <button type="button" onclick="cancelEdit()">Cancel</button>
+            `;
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                const updatedEvent = {
+                    date: document.getElementById('editEventDate').value,
+                    company: document.getElementById('editCompanyName').value,
+                    type: document.getElementById('editEventType').value
+                };
+                editEvent(event._id, updatedEvent);
+                resetForm();
+            };
+        }
+
+        // Function to cancel edit and reset form
+        function cancelEdit() {
+            resetForm();
+        }
+
+        // Function to reset form to add new event
+        function resetForm() {
+            const form = document.getElementById('addEventForm');
+            form.innerHTML = `
+                <input type="date" id="eventDate" required>
+                <input type="text" id="companyName" placeholder="Company Name" required>
+                <input type="text" id="eventType" placeholder="Event Type" required>
+                <button type="submit">Add Event</button>
+            `;
+            form.onsubmit = addNewEvent;
+        }
+
+        // Event listener for form submission (add new event)
+        function addNewEvent(e) {
             e.preventDefault();
             const eventDate = new Date(document.getElementById('eventDate').value);
             const currentDate = new Date();
@@ -158,9 +235,11 @@
                 company: document.getElementById('companyName').value,
                 type: document.getElementById('eventType').value
             };
-            await addEvent(event);
+            addEvent(event);
             e.target.reset();
-        });
+        }
+
+        document.getElementById('addEventForm').onsubmit = addNewEvent;
 
         // Initial load of events
         refreshEvents();

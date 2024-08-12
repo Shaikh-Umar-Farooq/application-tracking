@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -57,6 +56,33 @@ app.post('/api/events', async (req, res) => {
     res.status(201).json(newEvent);
   } catch (error) {
     res.status(400).json({ message: 'Error creating event', error: error.message });
+  }
+});
+
+app.put('/api/events/:id', async (req, res) => {
+  try {
+    const { date, company, type } = req.body;
+    const eventDate = new Date(date);
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0); // Set to start of day
+
+    if (eventDate < currentDate) {
+      return res.status(400).json({ message: 'Cannot update events to past dates' });
+    }
+
+    const updatedEvent = await Event.findByIdAndUpdate(
+      req.params.id,
+      { date: eventDate, company, type },
+      { new: true }
+    );
+
+    if (!updatedEvent) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    res.json(updatedEvent);
+  } catch (error) {
+    res.status(400).json({ message: 'Error updating event', error: error.message });
   }
 });
 
