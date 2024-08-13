@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const moment = require('moment-timezone');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,11 +29,15 @@ const EventSchema = new mongoose.Schema({
 
 const Event = mongoose.model('Event', EventSchema);
 
+// Helper function to get the start of day in IST
+function getStartOfDayIST(date) {
+  return moment(date).tz('Asia/Kolkata').startOf('day').toDate();
+}
+
 // Routes
 app.get('/api/events', async (req, res) => {
   try {
-    const currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0); // Set to start of day
+    const currentDate = getStartOfDayIST(new Date());
     const events = await Event.find({ date: { $gte: currentDate } }).sort({ date: 1 });
     res.json(events);
   } catch (error) {
@@ -43,9 +48,8 @@ app.get('/api/events', async (req, res) => {
 app.post('/api/events', async (req, res) => {
   try {
     const { date, company, type } = req.body;
-    const eventDate = new Date(date);
-    const currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0); // Set to start of day
+    const eventDate = getStartOfDayIST(date);
+    const currentDate = getStartOfDayIST(new Date());
 
     if (eventDate < currentDate) {
       return res.status(400).json({ message: 'Cannot add events for past dates' });
@@ -62,9 +66,8 @@ app.post('/api/events', async (req, res) => {
 app.put('/api/events/:id', async (req, res) => {
   try {
     const { date, company, type } = req.body;
-    const eventDate = new Date(date);
-    const currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0); // Set to start of day
+    const eventDate = getStartOfDayIST(date);
+    const currentDate = getStartOfDayIST(new Date());
 
     if (eventDate < currentDate) {
       return res.status(400).json({ message: 'Cannot update events to past dates' });
